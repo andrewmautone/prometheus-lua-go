@@ -51,6 +51,16 @@ cannot perform add operation between nil and number`).
 We override `tonumber` in `bootstrap.lua` to retry the conversion with
 `.0` injected before the `e` when the raw call returns nil.
 
+The same shim also handles two related gopher-lua quirks:
+
+- `tonumber(s, 16)` and `tonumber(s, 2)` return nil when the value
+  overflows int64 (e.g. `0xFFFFFFFFFFFFFFFF`). We fall back to a manual
+  base conversion using float multiplication, which overflows to
+  `math.huge` rather than producing nil.
+- Decimal scientific literals that overflow float64 (e.g. `1e500`) get
+  mapped to signed `math.huge`, matching standard Lua / LuaJIT semantics
+  instead of returning nil.
+
 ---
 
 If you spot additional gopher-lua compatibility issues, please open an issue

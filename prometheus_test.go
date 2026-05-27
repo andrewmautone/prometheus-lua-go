@@ -118,6 +118,8 @@ func TestObfuscate_ScientificNumberLiteral(t *testing.T) {
 	}{
 		{"plain_scientific", `local KILLS = 5e3; local DAY = 86400; return KILLS * DAY`},
 		{"extreme_literal", `local huge = 1e500; local norm = 4294967295; return huge + norm`},
+		{"big_hex_literal", `local mask = 0xFFFFFFFFFFFFFFFF; return mask`},
+		{"big_binary_literal", `local mask = 0b1111111111111111111111111111111111111111111111111111111111111111; return mask`},
 	}
 	for _, tc := range cases {
 		tc := tc

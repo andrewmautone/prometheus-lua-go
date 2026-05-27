@@ -26,14 +26,54 @@ arg = arg or {}
 -- Wrap tonumber globally and inject ".0" before "e" when the raw call fails.
 do
     local rawTonumber = tonumber
-    _G.tonumber = function(s, base)
-        if base ~= nil then
-            return rawTonumber(s, base)
+    local floor = math.floor
+
+    -- Manual base conversion for digits up to a given base. Avoids the
+    -- int64 overflow that gopher-lua's strconv-backed tonumber hits on
+    -- big hex / binary literals (e.g. 0xFFFFFFFFFFFFFFFF). Uses
+    -- multiplication on floats, which gracefully overflows to math.huge
+    -- rather than returning nil.
+    local function manualBaseConvert(s, base, charPattern)
+        local body = s:match("^%s*(" .. charPattern .. "+)%s*$")
+        if not body then
+            return nil
         end
-        local n = rawTonumber(s)
+        local v = 0
+        for i = 1, #body do
+            local c = body:byte(i)
+            local d
+            if c >= 48 and c <= 57 then
+                d = c - 48
+            elseif c >= 65 and c <= 70 then
+                d = c - 55
+            elseif c >= 97 and c <= 102 then
+                d = c - 87
+            else
+                return nil
+            end
+            if d >= base then
+                return nil
+            end
+            v = v * base + d
+        end
+        return v
+    end
+
+    _G.tonumber = function(s, base)
+        local n = rawTonumber(s, base)
         if n ~= nil or type(s) ~= "string" then
             return n
         end
+        if base == 16 then
+            return manualBaseConvert(s, 16, "%x")
+        end
+        if base == 2 then
+            return manualBaseConvert(s, 2, "[01]")
+        end
+        if base ~= nil then
+            return nil
+        end
+        -- base == nil: decimal / scientific path.
         local fixed, replaced = s:gsub("^(%s*[%+%-]?%d+)([eE])", "%1.0%2")
         if replaced > 0 then
             n = rawTonumber(fixed)
@@ -43,8 +83,6 @@ do
         end
         -- Out-of-range scientific literal: gopher-lua's strconv.ParseFloat
         -- rejects values that overflow a float64. Standard Lua returns inf.
-        -- Detect the shape "[sign]digits[.digits]e[sign]digits" and map to
-        -- signed math.huge so downstream code gets a number, not nil.
         local sign = s:match("^%s*([%+%-]?)%d[%d%.]*[eE][%+%-]?%d+%s*$")
         if sign ~= nil then
             if sign == "-" then
