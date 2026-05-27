@@ -130,5 +130,22 @@ if __prom_pretty__ then
     cfg.PrettyPrint = true
 end
 
+-- Pre-process LuaJIT-style `goto continue` + `::continue::` patterns.
+-- OTClient and LuaJIT-based clients emulate `continue` via gotos because
+-- stock Lua 5.1 lacks both `continue` and `goto`. Prometheus's Lua51
+-- parser doesn't support `goto`/`::label::` at all, so we normalize the
+-- pattern into our supported soft-keyword `continue`:
+--   `goto continue`   -> `continue`
+--   `::continue::`    -> ""
+-- This is intentionally narrow (only the `continue` label) so we don't
+-- silently rewrite arbitrary control flow. Other goto labels still fail
+-- to parse; add full goto support if your code needs more.
+local function normalizeGotoContinue(src)
+    src = src:gsub("goto%s+continue", "continue")
+    src = src:gsub("::%s*continue%s*::", "")
+    return src
+end
+__prom_source__ = normalizeGotoContinue(__prom_source__)
+
 local pipeline = Prometheus.Pipeline:fromConfig(cfg)
 __prom_result__ = pipeline:apply(__prom_source__, __prom_filename__)

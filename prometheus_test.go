@@ -171,6 +171,20 @@ return obj:continue() + obj.continue_value
 			"continue_with_trailing_semicolon",
 			`for i = 1, 5 do if i == 3 then continue; end print(i) end`,
 		},
+		{
+			// LuaJIT/OTClient emulation pattern. Our bootstrap rewrites
+			// `goto continue` to `continue` and drops `::continue::`
+			// labels before Prometheus tokenizes the source.
+			"luajit_goto_continue_emulation",
+			`
+for i = 1, 5 do
+    if i == 2 then goto continue end
+    if i == 3 then goto continue end
+    print(i)
+    ::continue::
+end
+`,
+		},
 	}
 	for _, tc := range cases {
 		tc := tc

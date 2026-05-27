@@ -67,6 +67,22 @@ The same shim also handles two related gopher-lua quirks:
   mapped to signed `math.huge`, matching standard Lua / LuaJIT semantics
   instead of returning nil.
 
+## `bootstrap.lua` — `goto continue` / `::continue::` normalization
+
+OTClient and other LuaJIT-based clients emulate the missing `continue`
+statement via `goto continue` + `::continue::` because stock Lua 5.1
+has neither. Prometheus's Lua51 parser does not support `goto`/labels
+at all, so we run a narrow text-level pre-pass on the source before
+tokenization:
+
+  - `goto continue` → `continue`
+  - `::continue::` → "" (dropped)
+
+The rewritten `continue` is then picked up by our soft-keyword branch
+in the parser. Intentionally narrow: only the `continue` label is
+rewritten. Other goto labels still fail to parse and will need full
+goto/label support if anyone hits them.
+
 ## `luasrc/prometheus/parser.lua` — `continue` as a soft keyword
 
 LuaJIT-family clients (OTClient, LÖVE, and forks like UltraBeasts) treat
