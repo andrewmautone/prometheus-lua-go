@@ -194,8 +194,19 @@ function NumbersToExpressions:apply(ast)
 
 	visitast(ast, nil, function(node, _)
 		if node.kind == AstKind.NumberExpression then
+			-- Patch by prometheus-lua-go: bail when the literal's value is
+			-- not a finite number. The Prometheus tokenizer can produce
+			-- NumberExpressions with non-numeric value when gopher-lua's
+			-- tonumber fails on an exotic literal we have not yet shimmed
+			-- (e.g. an out-of-int64 hex). The generators below all assume
+			-- val is a finite number; without this guard a single odd
+			-- literal in the source crashes the whole obfuscation pass.
+			local v = node.value
+			if type(v) ~= "number" or v ~= v or v == math.huge or v == -math.huge then
+				return
+			end
 			if math.random() <= self.Threshold then
-				return self:CreateNumberExpression(node.value, 0)
+				return self:CreateNumberExpression(v, 0)
 			end
 		end
 	end)

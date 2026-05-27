@@ -36,6 +36,12 @@ Patched the three generators (Addition, Subtraction, Modulo) to detect the
 nil round-trip and return `false`, which falls through to the next generator
 (or to a plain NumberExpression).
 
+Also added a guard at the top of `NumbersToExpressions:apply` that skips
+the obfuscation entirely when `node.value` is not a finite number — nil,
+NaN, or ±inf. This is defense-in-depth against any literal whose
+gopher-lua tokenization we have not explicitly shimmed: a single odd
+literal in the input would otherwise crash the whole pipeline.
+
 ## `bootstrap.lua` — `tonumber` shim
 
 gopher-lua's `tonumber` rejects decimal scientific-notation literals that
