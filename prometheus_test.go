@@ -103,6 +103,37 @@ func TestObfuscate_LargeLocaleTable(t *testing.T) {
 	}
 }
 
+// TestObfuscate_ScientificNumberLiteral covers two number-literal forms
+// that exposed bugs in our wrapper:
+//
+//   - "5e3" (no decimal point) hits a gopher-lua tonumber quirk: it
+//     returns nil for any "NNNeKK" form lacking a "." between mantissa and
+//     exponent. bootstrap.lua now shims tonumber to retry with ".0e".
+//   - "1e500" parses to +Inf and overflows arithmetic inside the
+//     NumbersToExpressions generators; those generators now bail when the
+//     round-trip via tostring/tonumber produces nil.
+func TestObfuscate_ScientificNumberLiteral(t *testing.T) {
+	cases := []struct {
+		name, src string
+	}{
+		{"plain_scientific", `local KILLS = 5e3; local DAY = 86400; return KILLS * DAY`},
+		{"extreme_literal", `local huge = 1e500; local norm = 4294967295; return huge + norm`},
+	}
+	for _, tc := range cases {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			o := New(Config{Preset: PresetMedium, Seed: 1})
+			out, err := o.Obfuscate(tc.src)
+			if err != nil {
+				t.Fatalf("Obfuscate %s: %v", tc.name, err)
+			}
+			if out == "" {
+				t.Fatal("empty output")
+			}
+		})
+	}
+}
+
 func TestObfuscate_Concurrent(t *testing.T) {
 	o := New(Config{Preset: PresetWeak, Seed: 7})
 	const n = 8

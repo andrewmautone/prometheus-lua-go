@@ -63,11 +63,26 @@ local function contains(table, value)
 end
 
 function NumbersToExpressions:init(_)
+	-- Patch by prometheus-lua-go: tonumber(tostring(x)) can return nil when
+	-- x is inf/nan (e.g. when val is an extreme literal and `val ± val2`
+	-- overflows). The original code then attempts arithmetic on nil and
+	-- crashes. We treat any nil round-trip as "this generator cannot
+	-- represent this value" and bail to the next generator.
+	local function safeRoundTrip2(a, b)
+		local ra = tonumber(tostring(a))
+		local rb = tonumber(tostring(b))
+		if ra == nil or rb == nil then
+			return nil, nil
+		end
+		return ra, rb
+	end
+
 	self.ExpressionGenerators = {
 		function(val, depth) -- Addition
 			local val2 = math.random(-2 ^ 20, 2 ^ 20)
 			local diff = val - val2
-			if tonumber(tostring(diff)) + tonumber(tostring(val2)) ~= val then
+			local rd, rv = safeRoundTrip2(diff, val2)
+			if rd == nil or rd + rv ~= val then
 				return false
 			end
 			return Ast.AddExpression(
@@ -80,7 +95,8 @@ function NumbersToExpressions:init(_)
 		function(val, depth) -- Subtraction
 			local val2 = math.random(-2 ^ 20, 2 ^ 20)
 			local diff = val + val2
-			if tonumber(tostring(diff)) - tonumber(tostring(val2)) ~= val then
+			local rd, rv = safeRoundTrip2(diff, val2)
+			if rd == nil or rd - rv ~= val then
 				return false
 			end
 			return Ast.SubExpression(
@@ -92,7 +108,8 @@ function NumbersToExpressions:init(_)
 
 		function(val, depth) -- Modulo
 			local lhs, rhs = generateModuloExpression(val)
-			if tonumber(tostring(lhs)) % tonumber(tostring(rhs)) ~= val then
+			local rl, rr = safeRoundTrip2(lhs, rhs)
+			if rl == nil or rr == 0 or rl % rr ~= val then
 				return false
 			end
 			return Ast.ModExpression(

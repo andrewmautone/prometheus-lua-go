@@ -24,6 +24,33 @@ non-table object(nil) with key 'id'`).
 
 The line is commented out in our embedded copy. No other code is affected.
 
+## `luasrc/prometheus/steps/NumbersToExpressions.lua`
+
+The original generators do `tonumber(tostring(diff)) ± tonumber(tostring(val2))`
+to verify a candidate decomposition. When `val + val2` (or `val - val2`)
+overflows to inf/nan — possible with extreme numeric literals in the input —
+`tonumber(tostring(inf))` returns `nil`, and the next arithmetic op then
+errors with "cannot perform sub operation between nil and number".
+
+Patched the three generators (Addition, Subtraction, Modulo) to detect the
+nil round-trip and return `false`, which falls through to the next generator
+(or to a plain NumberExpression).
+
+## `bootstrap.lua` — `tonumber` shim
+
+gopher-lua's `tonumber` rejects decimal scientific-notation literals that
+lack an explicit decimal point: `tonumber("1e10")`, `tonumber("2e5")`, even
+`tonumber("2e0")` all return `nil`. Standard Lua / LuaJIT accept these.
+
+This breaks the Prometheus tokenizer, which converts every number literal
+in the source via `tonumber`. Any `Ne...` literal in the input becomes a
+`NumberExpression` with `value = nil`, and every subsequent step that does
+arithmetic on `node.value` crashes (e.g. `NumbersToExpressions.lua:50:
+cannot perform add operation between nil and number`).
+
+We override `tonumber` in `bootstrap.lua` to retry the conversion with
+`.0` injected before the `e` when the raw call returns nil.
+
 ---
 
 If you spot additional gopher-lua compatibility issues, please open an issue
