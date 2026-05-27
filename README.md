@@ -79,12 +79,13 @@ go run ./examples/basic
 
 ## Presets
 
-| Constant            | Lua name   | Description                                                               |
-| ------------------- | ---------- | ------------------------------------------------------------------------- |
-| `PresetMinify`      | `Minify`   | Minify only. No obfuscation. No runtime cost.                             |
-| `PresetWeak`        | `Weak`     | Light obfuscation. Highly readable, very low runtime cost.                |
-| `PresetMedium`      | `Medium`   | Balanced — constant arrays, string splitting, proxy locals. (Default.)    |
-| `PresetStrong`      | `Strong`   | Aggressive — adds VM-ification, encryption, anti-tamper. Heavier runtime. |
+| Constant            | Lua name    | Description                                                                |
+| ------------------- | ----------- | -------------------------------------------------------------------------- |
+| `PresetMinify`      | `Minify`    | Minify only. No obfuscation. No runtime cost.                              |
+| `PresetWeak`        | `Weak`      | Light obfuscation. Highly readable, very low runtime cost.                 |
+| `PresetMedium`      | `Medium`    | Balanced — constant arrays, string splitting, proxy locals. (Default.)     |
+| `PresetStrong`      | `Strong`    | Aggressive — adds VM-ification, encryption, anti-tamper. Heavier runtime.  |
+| `PresetOTClient`    | `OTClient`  | Light, safe for LuaJIT-based clients (OTClient, LÖVE, Tibia clients). Omits AntiTamper / Vmify / EncryptStrings, which depend on runtime invariants that diverge between LuaJIT and stock Lua. |
 
 You can also pass any preset key supported by upstream Prometheus as a plain
 string (for example `prometheus.Preset("Vmify")` for the isolated Vmify step).

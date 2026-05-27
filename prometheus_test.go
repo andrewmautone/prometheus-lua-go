@@ -32,7 +32,7 @@ func TestObfuscate_TransformsCode(t *testing.T) {
 }
 
 func TestObfuscate_AllPresets(t *testing.T) {
-	for _, p := range []Preset{PresetMinify, PresetWeak, PresetMedium, PresetStrong} {
+	for _, p := range []Preset{PresetMinify, PresetWeak, PresetMedium, PresetStrong, PresetOTClient} {
 		p := p
 		t.Run(string(p), func(t *testing.T) {
 			o := New(Config{Preset: p, Seed: 1})

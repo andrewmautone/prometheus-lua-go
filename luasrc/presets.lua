@@ -117,4 +117,33 @@ return {
 			{ Name = "WrapInFunction", Settings = {} },
 		},
 	},
+
+	-- Added by prometheus-lua-go. Light, "safe" obfuscation for LuaJIT-based
+	-- clients (OTClient, LÖVE, custom Tibia/UB clients) where the host Lua
+	-- VM is not stock Lua 5.1. AntiTamper, Vmify, and EncryptStrings all
+	-- run runtime checks (math.huge equality, string.dump probing, custom
+	-- bytecode VMs) that diverge between LuaJIT and stock Lua and fail in
+	-- the wild — they cause silent early-exits in the obfuscated wrapper,
+	-- which leaves the module's symbols undefined.
+	["OTClient"] = {
+		LuaVersion = "Lua51",
+		VarNamePrefix = "",
+		NameGenerator = "MangledShuffled",
+		PrettyPrint = false,
+		Seed = 0,
+		Steps = {
+			{
+				Name = "ConstantArray",
+				Settings = {
+					Threshold = 1,
+					StringsOnly = true,
+					Shuffle = true,
+					Rotate = true,
+					LocalWrapperThreshold = 0,
+				},
+			},
+			{ Name = "NumbersToExpressions", Settings = {} },
+			{ Name = "WrapInFunction", Settings = {} },
+		},
+	},
 }

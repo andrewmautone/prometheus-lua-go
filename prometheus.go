@@ -31,6 +31,13 @@ const (
 	PresetWeak   Preset = "Weak"
 	PresetMedium Preset = "Medium"
 	PresetStrong Preset = "Strong"
+	// PresetOTClient is a wrapper-only preset tuned for LuaJIT-based
+	// clients (OTClient and forks). It runs ConstantArray +
+	// NumbersToExpressions + WrapInFunction, omitting AntiTamper, Vmify,
+	// and EncryptStrings — those three rely on runtime invariants that
+	// diverge between LuaJIT and stock Lua and silently break the
+	// obfuscated wrapper at load time.
+	PresetOTClient Preset = "OTClient"
 )
 
 // LuaVersion selects the source dialect Prometheus parses and emits.
