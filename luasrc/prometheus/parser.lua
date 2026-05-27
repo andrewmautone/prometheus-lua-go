@@ -224,6 +224,19 @@ function Parser:statement(scope, currentLoop)
 		end
 	end
 
+	-- Goto Statement (Lua 5.2+/LuaJIT/OTClient). Patch by prometheus-lua-go.
+	if(consume(self, TokenKind.Keyword, "goto")) then
+		local labelToken = expect(self, TokenKind.Ident);
+		return Ast.GotoStatement(labelToken.value), false;
+	end
+
+	-- Label Statement: ::label::. Patch by prometheus-lua-go.
+	if(consume(self, TokenKind.Symbol, "::")) then
+		local labelToken = expect(self, TokenKind.Ident);
+		expect(self, TokenKind.Symbol, "::");
+		return Ast.LabelStatement(labelToken.value), false;
+	end
+
 	-- do ... end Statement
 	if(consume(self, TokenKind.Keyword, "do")) then
 		local body = self:block(scope, currentLoop);

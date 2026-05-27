@@ -156,6 +156,14 @@ function Unparser:unparseStatement(statement, tabbing)
 	if(statement.kind == AstKind.ContinueStatement) then
 		push("continue");
 
+	-- Goto Statement (prometheus-lua-go)
+	elseif(statement.kind == AstKind.GotoStatement) then
+		push("goto ", statement.label);
+
+	-- Label Statement (prometheus-lua-go)
+	elseif(statement.kind == AstKind.LabelStatement) then
+		push("::", statement.label, "::");
+
 	-- Break Statement
 	elseif(statement.kind == AstKind.BreakStatement) then
 		push("break");

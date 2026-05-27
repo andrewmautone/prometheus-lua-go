@@ -67,21 +67,28 @@ The same shim also handles two related gopher-lua quirks:
   mapped to signed `math.huge`, matching standard Lua / LuaJIT semantics
   instead of returning nil.
 
-## `bootstrap.lua` — `goto continue` / `::continue::` normalization
+## `goto` / `::label::` support
 
-OTClient and other LuaJIT-based clients emulate the missing `continue`
-statement via `goto continue` + `::continue::` because stock Lua 5.1
-has neither. Prometheus's Lua51 parser does not support `goto`/labels
-at all, so we run a narrow text-level pre-pass on the source before
-tokenization:
+Lua 5.2+, LuaJIT, and OTClient-family clients all support `goto label`
+and `::label::` statements. Upstream Prometheus does not.
 
-  - `goto continue` → `continue`
-  - `::continue::` → "" (dropped)
+We added:
 
-The rewritten `continue` is then picked up by our soft-keyword branch
-in the parser. Intentionally narrow: only the `continue` label is
-rewritten. Other goto labels still fail to parse and will need full
-goto/label support if anyone hits them.
+  - `goto` to Lua51 keywords (in `enums.lua`)
+  - `::` to Lua51 symbols (in `enums.lua`)
+  - `GotoStatement` and `LabelStatement` AST kinds + constructors (`ast.lua`)
+  - Parser branches in `parser.lua` for both statements
+  - Unparser cases in `unparser.lua` that emit `goto label` and `::label::`
+
+The Vmify step compiles the AST into a custom VM whose compiler does
+not model arbitrary goto. Rather than add a partial implementation,
+`bootstrap.lua` detects `goto`/`::label::` in the source and removes
+Vmify from the active Steps list for that file. Every other
+obfuscation pass (EncryptStrings, ConstantArray, NumbersToExpressions,
+ProxifyLocals, AntiTamper, WrapInFunction, SplitStrings) still runs.
+
+This means files containing goto/label get *less* obfuscation than
+files without them, but the build doesn't fail.
 
 ## `luasrc/prometheus/parser.lua` — `continue` as a soft keyword
 

@@ -130,22 +130,32 @@ if __prom_pretty__ then
     cfg.PrettyPrint = true
 end
 
--- Pre-process LuaJIT-style `goto continue` + `::continue::` patterns.
--- OTClient and LuaJIT-based clients emulate `continue` via gotos because
--- stock Lua 5.1 lacks both `continue` and `goto`. Prometheus's Lua51
--- parser doesn't support `goto`/`::label::` at all, so we normalize the
--- pattern into our supported soft-keyword `continue`:
---   `goto continue`   -> `continue`
---   `::continue::`    -> ""
--- This is intentionally narrow (only the `continue` label) so we don't
--- silently rewrite arbitrary control flow. Other goto labels still fail
--- to parse; add full goto support if your code needs more.
-local function normalizeGotoContinue(src)
-    src = src:gsub("goto%s+continue", "continue")
-    src = src:gsub("::%s*continue%s*::", "")
-    return src
+-- Strip Vmify when the source uses `goto` / `::label::`.
+-- The parser/unparser now understand goto and labels (see PATCHES.md),
+-- but the Vmify step compiles the entire AST into a bespoke VM whose
+-- compiler does not model arbitrary goto. Rather than crashing, we
+-- detect goto/label in the source and remove Vmify from the active
+-- Steps list. The file still gets every other obfuscation pass
+-- (EncryptStrings, ConstantArray, ProxifyLocals, AntiTamper, etc.).
+local function hasGotoOrLabel(src)
+    if src:match("[^%w_]goto%s+[%a_]") or src:match("^goto%s+[%a_]") then
+        return true
+    end
+    if src:match("::%s*[%a_][%w_]*%s*::") then
+        return true
+    end
+    return false
 end
-__prom_source__ = normalizeGotoContinue(__prom_source__)
+
+if hasGotoOrLabel(__prom_source__) and cfg.Steps then
+    local filtered = {}
+    for _, step in ipairs(cfg.Steps) do
+        if step.Name ~= "Vmify" then
+            filtered[#filtered + 1] = step
+        end
+    end
+    cfg.Steps = filtered
+end
 
 local pipeline = Prometheus.Pipeline:fromConfig(cfg)
 __prom_result__ = pipeline:apply(__prom_source__, __prom_filename__)

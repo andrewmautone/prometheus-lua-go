@@ -172,16 +172,33 @@ return obj:continue() + obj.continue_value
 			`for i = 1, 5 do if i == 3 then continue; end print(i) end`,
 		},
 		{
-			// LuaJIT/OTClient emulation pattern. Our bootstrap rewrites
-			// `goto continue` to `continue` and drops `::continue::`
-			// labels before Prometheus tokenizes the source.
-			"luajit_goto_continue_emulation",
+			// goto/label support inside a loop body (LuaJIT continue idiom).
+			"goto_label_in_loop",
 			`
 for i = 1, 5 do
     if i == 2 then goto continue end
     if i == 3 then goto continue end
     print(i)
     ::continue::
+end
+`,
+		},
+		{
+			// goto/label used for function-level early exit. This is the
+			// pattern in changemove.lua: ::continue:: is not at end of
+			// function and is not bound to a loop, so this MUST be parsed
+			// as actual goto/label (cannot be rewritten to `continue`).
+			"goto_label_function_early_exit",
+			`
+function onItemGrabbed(self, mb)
+    local x = nil
+    if mb ~= 1 then goto continue end
+    x = compute()
+    if not x then goto continue end
+    process(x)
+    ::continue::
+    cleanup()
+    return true
 end
 `,
 		},

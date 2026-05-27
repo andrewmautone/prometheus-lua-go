@@ -13,6 +13,8 @@ local AstKind = {
 
 	-- Statements
 	ContinueStatement = "ContinueStatement";
+	GotoStatement = "GotoStatement";
+	LabelStatement = "LabelStatement";
 	BreakStatement = "BreakStatement";
 	DoStatement = "DoStatement";
 	WhileStatement = "WhileStatement";
@@ -215,6 +217,21 @@ function Ast.ContinueStatement(loop, scope)
 		kind = AstKind.ContinueStatement,
 		loop = loop,
 		scope = scope,
+	}
+end
+
+-- Added by prometheus-lua-go for Lua 5.2+/LuaJIT goto support.
+function Ast.GotoStatement(label)
+	return {
+		kind = AstKind.GotoStatement,
+		label = label,
+	}
+end
+
+function Ast.LabelStatement(label)
+	return {
+		kind = AstKind.LabelStatement,
+		label = label,
 	}
 end
 

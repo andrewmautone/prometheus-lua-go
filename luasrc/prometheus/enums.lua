@@ -16,8 +16,11 @@ Enums.LuaVersion = {
 Enums.Conventions = {
 	[Enums.LuaVersion.Lua51] = {
 		Keywords = {
+			-- "goto" added by prometheus-lua-go: Lua 5.2+/LuaJIT/OTClient
+			-- treat goto as a reserved word. Stock Lua 5.1 does not, but
+			-- the obfuscator's target codebases do.
 			"and", "break", "do", "else", "elseif",
-			"end", "false", "for", "function", "if",
+			"end", "false", "for", "function", "goto", "if",
 			"in", "local", "nil", "not", "or",
 			"repeat", "return", "then", "true", "until", "while"
 		},
@@ -25,10 +28,11 @@ Enums.Conventions = {
 		SymbolChars = chararray("+-*/%^#=~<>(){}[];:,."),
 		MaxSymbolLength = 3,
 		Symbols = {
+			-- "::" added by prometheus-lua-go for goto-label support.
 			"+", "-", "*", "/", "%", "^", "#",
 			"==", "~=", "<=", ">=", "<", ">", "=",
 			"(", ")", "{", "}", "[", "]",
-			";", ":", ",", ".", "..", "...",
+			";", ":", "::", ",", ".", "..", "...",
 		},
 
 		IdentChars = chararray("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_0123456789"),
