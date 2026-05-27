@@ -1,0 +1,14 @@
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+*.prof
+coverage.out
+.idea/
+.vscode/
+.DS_Store
+go.work
+go.work.sum

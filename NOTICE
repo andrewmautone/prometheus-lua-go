@@ -1,0 +1,24 @@
+prometheus-lua-go
+=================
+
+This product includes software developed by Elias Oelschner:
+
+  Prometheus - Lua Obfuscator
+  Copyright (c) 2025 Elias Oelschner
+  https://github.com/prometheus-lua/Prometheus
+  Licensed under the Prometheus License.
+
+The Lua source files under ./luasrc/ are a copy of the Prometheus obfuscator
+(v0.2.11.x), redistributed under the Prometheus License included in the
+LICENSE file at the root of this repository. A small compatibility patch was
+applied to make the source run under the gopher-lua VM; the patch is
+documented in PATCHES.md.
+
+  Based on Prometheus by Elias Oelschner, https://github.com/prometheus-lua/Prometheus
+
+This product also depends on:
+
+  gopher-lua
+  Copyright (c) 2015 Yusuke Inuzuka
+  https://github.com/yuin/gopher-lua
+  Licensed under the MIT License.
