@@ -198,8 +198,11 @@ function Parser:statement(scope, currentLoop)
 		return Ast.BreakStatement(currentLoop, scope), true;
 	end
 
-	-- Continue Statement - only valid inside of Loops - only valid in LuaU
-	if(self.luaVersion == LuaVersion.LuaU and consume(self, TokenKind.Keyword, "continue")) then
+	-- Continue Statement - only valid inside of Loops.
+	-- prometheus-lua-go: relaxed the LuaU-only restriction. The Lua51
+	-- tokenizer now includes "continue" in its keyword list (see
+	-- luasrc/prometheus/enums.lua), so this matches in both dialects.
+	if(consume(self, TokenKind.Keyword, "continue")) then
 		if(not currentLoop) then
 			if self.disableLog then error() end;
 			logger:error(generateError(self, "the continue Statement is only valid inside of loops"));

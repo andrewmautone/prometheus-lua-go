@@ -136,6 +136,33 @@ func TestObfuscate_ScientificNumberLiteral(t *testing.T) {
 	}
 }
 
+// TestObfuscate_ContinueKeyword exercises support for the `continue`
+// statement in Lua51 mode. Upstream Prometheus only accepts continue
+// when LuaVersion=LuaU; this wrapper enables it in Lua51 too because
+// LuaJIT-family clients (OTClient and forks) treat continue as a keyword.
+func TestObfuscate_ContinueKeyword(t *testing.T) {
+	src := `
+for i = 1, 10 do
+    if i % 2 == 0 then
+        continue
+    end
+    print(i)
+end
+`
+	o := New(Config{Preset: PresetMedium, Seed: 1})
+	out, err := o.Obfuscate(src)
+	if err != nil {
+		t.Fatalf("Obfuscate continue snippet: %v", err)
+	}
+	if out == "" {
+		t.Fatal("empty output")
+	}
+	// We intentionally don't assert the literal "continue" token in the
+	// output: Medium/Strong presets restructure the loop, so the keyword
+	// disappears even though semantics are preserved. The test gates the
+	// parser, not the unparser.
+}
+
 func TestObfuscate_Concurrent(t *testing.T) {
 	o := New(Config{Preset: PresetWeak, Seed: 7})
 	const n = 8

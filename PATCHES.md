@@ -67,6 +67,22 @@ The same shim also handles two related gopher-lua quirks:
   mapped to signed `math.huge`, matching standard Lua / LuaJIT semantics
   instead of returning nil.
 
+## `luasrc/prometheus/enums.lua` + `luasrc/prometheus/parser.lua` — `continue`
+
+LuaJIT-family clients (OTClient, LÖVE, and forks like UltraBeasts) treat
+`continue` as a keyword, even though stock Lua 5.1 does not. Upstream
+Prometheus only accepts `continue` when `LuaVersion = LuaU`.
+
+We added `continue` to the Lua51 keyword list in `enums.lua` and dropped
+the `luaVersion == LuaU` restriction at the `continue` statement branch
+in `parser.lua`. The unparser already emits `continue` uniformly, so no
+change there.
+
+Tradeoff: a Lua 5.1 source file that uses `continue` as a variable name
+(legal in stock 5.1) will no longer parse. We consider that acceptable
+because shipping Lua 5.1 code rarely uses `continue` as an identifier
+and the practical wins for OTClient-style codebases are significant.
+
 ---
 
 If you spot additional gopher-lua compatibility issues, please open an issue
