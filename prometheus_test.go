@@ -1,6 +1,7 @@
 package prometheus
 
 import (
+	"fmt"
 	"strings"
 	"sync"
 	"testing"
@@ -65,6 +66,40 @@ func TestObfuscate_UnknownPreset(t *testing.T) {
 	o := New(Config{Preset: "Bogus"})
 	if _, err := o.Obfuscate(helloLua); err == nil {
 		t.Fatal("expected error for unknown preset")
+	}
+}
+
+// TestObfuscate_LargeLocaleTable exercises the unparser's joinParts ->
+// table.concat path on a TableExpression with thousands of fields (i18n
+// locale style). With the default gopher-lua state (RegistryMaxSize=0)
+// this path runs out of registry slots and crashes. The fix in
+// ObfuscateNamed enables registry auto-grow.
+//
+// Skipped under -short because gopher-lua takes several seconds even for
+// this reduced size. Increase the entry count to stress larger workloads.
+func TestObfuscate_LargeLocaleTable(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping large-table test in short mode")
+	}
+	const entries = 1500
+	var b strings.Builder
+	b.Grow(entries * 96)
+	b.WriteString("return {\n")
+	for i := 0; i < entries; i++ {
+		fmt.Fprintf(&b, "  [%q] = %q,\n",
+			fmt.Sprintf("ui.label.section_%d.key_%d", i/100, i),
+			fmt.Sprintf("Translation %d.", i),
+		)
+	}
+	b.WriteString("}\n")
+
+	o := New(Config{Preset: PresetMinify, Seed: 1})
+	out, err := o.Obfuscate(b.String())
+	if err != nil {
+		t.Fatalf("Obfuscate large table (%d entries): %v", entries, err)
+	}
+	if out == "" {
+		t.Fatal("empty output")
 	}
 }
 

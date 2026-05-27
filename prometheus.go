@@ -84,7 +84,16 @@ func (o *Obfuscator) Obfuscate(source string) (string, error) {
 // ObfuscateNamed is Obfuscate with an explicit logical filename used in
 // diagnostics emitted by Prometheus.
 func (o *Obfuscator) ObfuscateNamed(source, filename string) (string, error) {
-	L := lua.NewState()
+	// gopher-lua defaults (RegistrySize=8192, RegistryMaxSize=0) overflow when
+	// Prometheus's unparser walks a large TableExpression — e.g. an i18n locale
+	// file with thousands of fields. RegistryMaxSize > 0 enables auto-grow up
+	// to the cap; CallStackSize headroom covers deeply nested ASTs.
+	L := lua.NewState(lua.Options{
+		CallStackSize:    1024,
+		RegistrySize:     1024 * 128,
+		RegistryMaxSize:  1024 * 1024,
+		RegistryGrowStep: 1024,
+	})
 	defer L.Close()
 
 	if err := registerEmbeddedModules(L); err != nil {
