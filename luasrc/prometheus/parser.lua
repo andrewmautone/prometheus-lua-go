@@ -199,16 +199,29 @@ function Parser:statement(scope, currentLoop)
 	end
 
 	-- Continue Statement - only valid inside of Loops.
-	-- prometheus-lua-go: relaxed the LuaU-only restriction. The Lua51
-	-- tokenizer now includes "continue" in its keyword list (see
-	-- luasrc/prometheus/enums.lua), so this matches in both dialects.
-	if(consume(self, TokenKind.Keyword, "continue")) then
+	-- LuaU treats `continue` as a real keyword. For Lua51 we keep it as a
+	-- regular identifier (so OTClient code like `function X:continue()` or
+	-- `obj.continue` still parses) and detect it here as a soft keyword:
+	-- when the current token is the identifier `continue` and the next
+	-- token is a statement boundary, parse it as a continue statement.
+	-- Patch by prometheus-lua-go.
+	if(self.luaVersion == LuaVersion.LuaU and consume(self, TokenKind.Keyword, "continue")) then
 		if(not currentLoop) then
 			if self.disableLog then error() end;
 			logger:error(generateError(self, "the continue Statement is only valid inside of loops"));
 		end
-		-- Return true as Second value because continue must be the last Statement in a block
 		return Ast.ContinueStatement(currentLoop, scope), true;
+	end
+	if(is(self, TokenKind.Ident, "continue")) then
+		local nextTk = peek(self, 1);
+		local boundary = nextTk.kind == TokenKind.Eof
+			or (nextTk.kind == TokenKind.Symbol and (nextTk.source == ";" or nextTk.source == "}"))
+			or (nextTk.kind == TokenKind.Keyword and (nextTk.source == "end" or nextTk.source == "else"
+				or nextTk.source == "elseif" or nextTk.source == "until"));
+		if(boundary and currentLoop) then
+			self.index = self.index + 1;
+			return Ast.ContinueStatement(currentLoop, scope), true;
+		end
 	end
 
 	-- do ... end Statement

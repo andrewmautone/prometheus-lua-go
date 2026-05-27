@@ -16,12 +16,7 @@ Enums.LuaVersion = {
 Enums.Conventions = {
 	[Enums.LuaVersion.Lua51] = {
 		Keywords = {
-			-- "continue" added by prometheus-lua-go: LuaJIT-family clients
-			-- (OTClient, LÖVE, etc.) treat continue as a keyword. Upstream
-			-- Prometheus only accepts continue in LuaU mode; we accept it
-			-- in Lua51 too. The parser's LuaU-only restriction is also
-			-- relaxed in luasrc/prometheus/parser.lua.
-			"and", "break", "continue", "do", "else", "elseif",
+			"and", "break", "do", "else", "elseif",
 			"end", "false", "for", "function", "if",
 			"in", "local", "nil", "not", "or",
 			"repeat", "return", "then", "true", "until", "while"

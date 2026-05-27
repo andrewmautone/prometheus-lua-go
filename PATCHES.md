@@ -67,21 +67,23 @@ The same shim also handles two related gopher-lua quirks:
   mapped to signed `math.huge`, matching standard Lua / LuaJIT semantics
   instead of returning nil.
 
-## `luasrc/prometheus/enums.lua` + `luasrc/prometheus/parser.lua` — `continue`
+## `luasrc/prometheus/parser.lua` — `continue` as a soft keyword
 
 LuaJIT-family clients (OTClient, LÖVE, and forks like UltraBeasts) treat
-`continue` as a keyword, even though stock Lua 5.1 does not. Upstream
+`continue` as a keyword *only at statement position*, while still using
+`continue` as a regular identifier elsewhere (method names like
+`function X:continue()`, field accesses like `obj.continue`). Upstream
 Prometheus only accepts `continue` when `LuaVersion = LuaU`.
 
-We added `continue` to the Lua51 keyword list in `enums.lua` and dropped
-the `luaVersion == LuaU` restriction at the `continue` statement branch
-in `parser.lua`. The unparser already emits `continue` uniformly, so no
-change there.
+We keep `continue` as a regular `Identifier` in the Lua51 tokenizer and
+add a soft-keyword branch in the parser: when the current token is the
+identifier `continue` AND the next token is a statement boundary
+(`;`, `}`, `end`, `else`, `elseif`, `until`, EOF) AND we're inside a
+loop, parse it as `Ast.ContinueStatement`. Otherwise it falls through
+to the regular identifier path.
 
-Tradeoff: a Lua 5.1 source file that uses `continue` as a variable name
-(legal in stock 5.1) will no longer parse. We consider that acceptable
-because shipping Lua 5.1 code rarely uses `continue` as an identifier
-and the practical wins for OTClient-style codebases are significant.
+This lets OTClient code that mixes `continue` statements with
+`continue`-named methods compile correctly.
 
 ---
 

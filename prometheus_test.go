@@ -136,31 +136,55 @@ func TestObfuscate_ScientificNumberLiteral(t *testing.T) {
 	}
 }
 
-// TestObfuscate_ContinueKeyword exercises support for the `continue`
-// statement in Lua51 mode. Upstream Prometheus only accepts continue
-// when LuaVersion=LuaU; this wrapper enables it in Lua51 too because
-// LuaJIT-family clients (OTClient and forks) treat continue as a keyword.
+// TestObfuscate_ContinueKeyword covers the LuaJIT/OTClient `continue`
+// extension as a soft keyword in Lua51 mode. Upstream Prometheus only
+// accepts continue when LuaVersion=LuaU; we accept it in Lua51 too, but
+// only when followed by a statement boundary, so identifiers like
+// obj.continue and method names `function X:continue()` still parse.
 func TestObfuscate_ContinueKeyword(t *testing.T) {
-	src := `
+	cases := []struct {
+		name, src string
+	}{
+		{
+			"continue_statement",
+			`
 for i = 1, 10 do
     if i % 2 == 0 then
         continue
     end
     print(i)
 end
-`
-	o := New(Config{Preset: PresetMedium, Seed: 1})
-	out, err := o.Obfuscate(src)
-	if err != nil {
-		t.Fatalf("Obfuscate continue snippet: %v", err)
+`,
+		},
+		{
+			"continue_as_method_name",
+			`
+local obj = {}
+function obj:continue()
+    return self.continue_value or 0
+end
+obj.continue_value = 1
+return obj:continue() + obj.continue_value
+`,
+		},
+		{
+			"continue_with_trailing_semicolon",
+			`for i = 1, 5 do if i == 3 then continue; end print(i) end`,
+		},
 	}
-	if out == "" {
-		t.Fatal("empty output")
+	for _, tc := range cases {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			o := New(Config{Preset: PresetMedium, Seed: 1})
+			out, err := o.Obfuscate(tc.src)
+			if err != nil {
+				t.Fatalf("Obfuscate %s: %v", tc.name, err)
+			}
+			if out == "" {
+				t.Fatal("empty output")
+			}
+		})
 	}
-	// We intentionally don't assert the literal "continue" token in the
-	// output: Medium/Strong presets restructure the loop, so the keyword
-	// disappears even though semantics are preserved. The test gates the
-	// parser, not the unparser.
 }
 
 func TestObfuscate_Concurrent(t *testing.T) {
