@@ -47,6 +47,12 @@ NumbersToExpressions.SettingsDescriptor = {
 }
 
 local function generateModuloExpression(n)
+	-- Patch by prometheus-lua-go: guard against non-finite n. Returning nils
+	-- lets the caller's safeRoundTrip2 detect and bail out to the next
+	-- generator instead of crashing on `nil + number` arithmetic.
+	if type(n) ~= "number" or n ~= n or n == math.huge or n == -math.huge then
+		return nil, nil
+	end
 	local rhs = n + math.random(1, 2^24)
 	local multiplier = math.random(1, 2^8)
 	local lhs = n + (multiplier * rhs)
@@ -122,6 +128,17 @@ function NumbersToExpressions:init(_)
 end
 
 function NumbersToExpressions:CreateNumberExpression(val, depth)
+	-- Patch by prometheus-lua-go: bail when val is not a finite number.
+	-- Applies to both the initial call from apply() and any recursive call
+	-- via the generators below. Without this guard a single nil/NaN/inf
+	-- value (e.g. from a gopher-lua tokenization quirk we haven't shimmed)
+	-- propagates into `n + math.random(...)` and crashes the pipeline.
+	if val == math.huge or val == -math.huge then
+		return Ast.NumberExpression(val)  -- unparser handles ±inf
+	end
+	if type(val) ~= "number" or val ~= val then
+		return Ast.NumberExpression(0)  -- nil/NaN sentinel; literal was already invalid
+	end
 	if depth > 0 and math.random() >= self.InternalThreshold or depth > 15 then
 		local format = self.AllowedNumberRepresentations[math.random(1, #self.AllowedNumberRepresentations)]
 		if not self.NumberRepresentationMutaton then
